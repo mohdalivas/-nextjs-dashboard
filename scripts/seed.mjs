@@ -1,6 +1,8 @@
-import db from '../app/lib/db.mjs';
-import { invoices, customers, revenue, users } from '../app/lib/placeholder-data.js';
+import { getPgpClient } from '../app/lib/db';
+import { users, employees, projects, cost_segments, payroll_cycles, work_segments } from '../app/lib/placeholder-data.js';
 import bcrypt from 'bcrypt';
+
+const db = getPgpClient();
 
 async function seedUsers(client) {
   try {
@@ -32,136 +34,232 @@ async function seedUsers(client) {
 
     console.log(`Seeded ${insertedUsers.length} users`);
 
-    return {
-      createTable,
-      users: insertedUsers,
-    };
+    return { createTable, /* users: insertedUsers */ };
   } catch (error) {
     console.error('Error seeding users:', error);
     throw error;
   }
 }
 
-async function seedInvoices(client) {
+async function seedEmployees(client) {
   try {
     await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
-    // Create the "invoices" table if it doesn't exist
+    // Create the "employees" table if it doesn't exist
     const createTable = await client.query(`
-    CREATE TABLE IF NOT EXISTS invoices (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    customer_id UUID NOT NULL,
-    amount INT NOT NULL,
-    status VARCHAR(255) NOT NULL,
-    date DATE NOT NULL
+    CREATE TABLE IF NOT EXISTS employees (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      name VARCHAR(50) NOT NULL,
+      is_active bit NOT NULL,
+      created_by UUID REFERENCES users,
+      created TIMESTAMP DEFAULT NOW(),
+      modified_by UUID REFERENCES users,
+      modified TIMESTAMP DEFAULT NOW()
   );
 `);
 
-    console.log(`Created "invoices" table`);
+    console.log(`Created "employees" table`);
 
-    // Insert data into the "invoices" table
-    const insertedInvoices = await Promise.all(
-      invoices.map(
-        (invoice) => client.query(`
-        INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES ('${invoice.customer_id}', ${invoice.amount}, '${invoice.status}', '${invoice.date}')
+    // Insert data into the "employees" table
+    const insertedEmployees = await Promise.all(
+      employees.map(
+        (employee) => client.query(`
+        INSERT INTO employees (id, name, is_active, created_by, modified_by)
+        VALUES ('${employee.id}', '${employee.name}', CAST(${employee.is_active} AS bit), '${employee.created_by}', '${employee.modified_by}')
         ON CONFLICT (id) DO NOTHING;
       `),
       ),
     );
 
-    console.log(`Seeded ${insertedInvoices.length} invoices`);
+    console.log(`Seeded ${insertedEmployees.length} employees`);
 
-    return {
-      createTable,
-      invoices: insertedInvoices,
-    };
+    return { createTable, employees: insertedEmployees };
   } catch (error) {
-    console.error('Error seeding invoices:', error);
+    console.error('Error seeding employees:', error);
     throw error;
   }
 }
 
-async function seedCustomers(client) {
+async function seedProjects(client) {
   try {
     await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
-    // Create the "customers" table if it doesn't exist
+    // Create the "projects" table if it doesn't exist
     const createTable = await client.query(`
-      CREATE TABLE IF NOT EXISTS customers (
+      CREATE TABLE IF NOT EXISTS projects (
         id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        image_url VARCHAR(255) NOT NULL
-      );
+        name VARCHAR(25) NOT NULL,
+        start_date date,
+        end_date date,
+        is_active bit NOT NULL,
+        created_by UUID REFERENCES users,
+        created TIMESTAMP DEFAULT NOW(),
+        modified_by UUID REFERENCES users,
+        modified TIMESTAMP DEFAULT NOW()
+      )
     `);
 
-    console.log(`Created "customers" table`);
+    console.log(`Created "projects" table`);
 
-    // Insert data into the "customers" table
-    const insertedCustomers = await Promise.all(
-      customers.map(
-        (customer) => client.query(`
-        INSERT INTO customers (id, name, email, image_url)
-        VALUES ('${customer.id}', '${customer.name}', '${customer.email}', '${customer.image_url}')
+    // Insert data into the "projects" table
+    const insertedProjects = await Promise.all(
+      projects.map(
+        (project) => client.query(`
+        INSERT INTO projects (id, name, start_date, end_date, is_active, created_by, modified_by)
+        VALUES ('${project.id}', '${project.name}', `+
+        (project.start_date ? `'${project.start_date}'`: `null`) + ',' +
+        (project.end_date ? `'${project.end_date}'`: `null`) + ',' +
+        `CAST(${project.is_active} AS bit), '${project.created_by}', '${project.modified_by}')
         ON CONFLICT (id) DO NOTHING;
       `),
       ),
     );
 
-    console.log(`Seeded ${insertedCustomers.length} customers`);
+    console.log(`Seeded ${insertedProjects.length} projects`);
 
-    return {
-      createTable,
-      customers: insertedCustomers,
-    };
+    return { createTable, projects: insertedProjects };
   } catch (error) {
-    console.error('Error seeding customers:', error);
+    console.error('Error seeding projects:', error);
     throw error;
   }
 }
 
-async function seedRevenue(client) {
+async function seedCost_segments(client) {
   try {
-    // Create the "revenue" table if it doesn't exist
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
+    // Create the "cost_segments" table if it doesn't exist
     const createTable = await client.query(`
-      CREATE TABLE IF NOT EXISTS revenue (
-        month VARCHAR(4) NOT NULL UNIQUE,
-        revenue INT NOT NULL
-      );
+    CREATE TABLE IF NOT EXISTS cost_segments (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        project_id UUID REFERENCES projects,
+        employee_id UUID REFERENCES employees,
+        cost_per_hour numeric(12,2),
+        cost_currency VARCHAR(5),
+        created_by UUID REFERENCES users,
+        created TIMESTAMP DEFAULT NOW(),
+        modified_by UUID REFERENCES users,
+        modified TIMESTAMP DEFAULT NOW()
+      )
     `);
 
-    console.log(`Created "revenue" table`);
+    console.log(`Created "cost_segments" table`);
 
-    // Insert data into the "revenue" table
-    const insertedRevenue = await Promise.all(
-      revenue.map(
-        (rev) => client.query(`
-        INSERT INTO revenue (month, revenue)
-        VALUES ('${rev.month}', ${rev.revenue})
-        ON CONFLICT (month) DO NOTHING;
+    // Insert data into the "cost_segments" table
+    const insertedProjects = await Promise.all(
+      cost_segments.map(
+        (cost) => client.query(`
+        INSERT INTO cost_segments (project_id, employee_id, cost_per_hour, cost_currency, created_by, modified_by)
+        VALUES ('${cost.project_id}', '${cost.employee_id}', ${cost.cost_per_hour * 100}, '${cost.cost_currency}', '${cost.created_by}', '${cost.modified_by}')
       `),
       ),
     );
 
-    console.log(`Seeded ${insertedRevenue.length} revenue`);
+    console.log(`Seeded ${insertedProjects.length} cost_segments`);
 
-    return {
-      createTable,
-      revenue: insertedRevenue,
-    };
+    return { createTable, cost_segments: insertedProjects };
   } catch (error) {
-    console.error('Error seeding revenue:', error);
+    console.error('Error seeding projects:', error);
+    throw error;
+  }
+}
+
+async function seedPayroll_cycles(client) {
+  try {
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
+    // Create the "payroll_cycles" table if it doesn't exist
+    const createTable = await client.query(`
+      CREATE TABLE IF NOT EXISTS payroll_cycles (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        start_date date,
+        end_date date,
+        created_by UUID REFERENCES users,
+        created TIMESTAMP DEFAULT NOW(),
+        modified_by UUID REFERENCES users,
+        modified TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    // month VARCHAR(4) NOT NULL UNIQUE,
+    // work_segments INT NOT NULL
+
+    console.log(`Created "payroll_cycles" table`);
+
+    // Insert data into the "payroll_cycles" table
+    const insertedWork_segments = await Promise.all(
+      payroll_cycles.map(
+        (cycle) => client.query(`
+        INSERT INTO payroll_cycles (id, start_date, end_date, created_by, modified_by)
+        VALUES ('${cycle.id}', '${cycle.start_date}', '${cycle.end_date}', '${cycle.created_by}', '${cycle.modified_by}')
+        ON CONFLICT (id) DO NOTHING;
+      `),
+      ),
+    );
+
+    console.log(`Seeded ${insertedWork_segments.length} payroll_cycles`);
+
+    return { createTable, /* work_segments: insertedWork_segments */ };
+  } catch (error) {
+    console.error('Error seeding payroll_cycles:', error);
+    throw error;
+  }
+}
+
+async function seedWork_segments(client) {
+  try {
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
+    // Create the "work_segments" table if it doesn't exist
+    const createTable = await client.query(`
+      CREATE TABLE IF NOT EXISTS work_segments (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        project_id UUID REFERENCES projects,
+        employee_id UUID REFERENCES employees,
+        start_date date,
+        end_date date,
+        hours_per_day time,
+        payroll_cycle_id UUID REFERENCES payroll_cycles,
+        created_by UUID REFERENCES users,
+        created TIMESTAMP DEFAULT NOW(),
+        modified_by UUID REFERENCES users,
+        modified TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    // work_date date,
+    // start_time time,
+    // end_time time,
+    // minutes_per_day interval minute,
+
+    console.log(`Created "work_segments" table`);
+
+    // Insert data into the "work_segments" table
+    const insertedWork_segments = await Promise.all(
+      work_segments.map(
+        (segment) => client.query(`
+        INSERT INTO work_segments (id, project_id, employee_id, start_date, end_date, hours_per_day, payroll_cycle_id, created_by, modified_by)
+        VALUES ('${segment.id}', '${segment.project_id}', '${segment.employee_id}', '${segment.start_date}', '${segment.end_date}', '${segment.hours_per_day}', '${segment.payroll_cycle_id}', '${segment.created_by}', '${segment.modified_by}')
+        ON CONFLICT (id) DO NOTHING;
+      `),
+      ),
+    );
+
+    console.log(`Seeded ${insertedWork_segments.length} work_segments`);
+
+    return { createTable, /* work_segments: insertedWork_segments */ };
+  } catch (error) {
+    console.error('Error seeding work_segments:', error);
     throw error;
   }
 }
 
 async function main() {
 
-  await seedUsers(db);
-  await seedCustomers(db);
-  await seedInvoices(db);
-  await seedRevenue(db);
+  // await seedUsers(db);
+  // await seedProjects(db);
+  // await seedEmployees(db);
+  await seedCost_segments(db);
+  // await seedPayroll_cycles(db);
+  // await seedWork_segments(db);
 
   // await db.end();
 }
