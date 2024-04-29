@@ -3,32 +3,45 @@ import {
   ClockIcon,
   UserGroupIcon,
   InboxIcon,
+  BriefcaseIcon,
+  CurrencyDollarIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 import { lusitana } from '@/app/ui/fonts';
 import { fetchCardData } from '@/app/lib/costs/data';
 
 const iconMap = {
-  collected: BanknotesIcon,
-  customers: UserGroupIcon,
-  pending: ClockIcon,
-  invoices: InboxIcon,
+  projects: BriefcaseIcon,
+  employees: UserGroupIcon,
+  days: CalendarDaysIcon,
+  hours: ClockIcon,
+  costs: CurrencyDollarIcon,
 };
 
 export default async function CardWrapper() {
-  const { numberOfInvoices, numberOfCustomers, totalPaidInvoices, totalPendingInvoices } = await fetchCardData();
+  const { 
+    numberOfProjects,
+    numberOfEmployees,
+    totalNumberOfDays,
+    totalCostPerHours,
+    totalHoursPerDays,
+    totalCosts
+  } = await fetchCardData();
 
   return (
     <>
       {/* NOTE: comment in this code when you get to this point in the course */}
-
-      <Card title="Collected" value={totalPaidInvoices} type="collected" />
-      <Card title="Pending" value={totalPendingInvoices} type="pending" />
-      <Card title="Total Invoices" value={numberOfInvoices} type="invoices" />
-      <Card
-        title="Total Customers"
-        value={numberOfCustomers}
-        type="customers"
-      />
+      {/* <pre>{JSON.stringify(data,null,1)}</pre> */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Card title="Number Of Projects" value={numberOfProjects} type="projects" />
+        <Card title="Number Of Employees" value={numberOfEmployees} type="employees" />
+        <Card title="Total Number Of Days" value={totalNumberOfDays} type="days" />
+        <Card title="Total Hours Per Days" value={totalHoursPerDays} type="hours" />
+      </div>
+      <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
+        <Card title="Total Cost Per Hours" value={totalCostPerHours.sum} type="costs" />
+        <Card title="Total Overall Costs" value={totalCosts.sum} type="costs" />
+      </div>
     </>
   );
 }
@@ -40,7 +53,7 @@ export function Card({
 }: {
   title: string;
   value: number | string;
-  type: 'invoices' | 'customers' | 'pending' | 'collected';
+  type: 'projects' | 'employees' | 'days' | 'hours' | 'costs';
 }) {
   const Icon = iconMap[type];
 

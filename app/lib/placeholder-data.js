@@ -148,7 +148,7 @@ const projects = [
   },
   {
     id: 'c4699595-9ca9-4056-9c2e-7a4fff339e15',
-    name: 'SNAK Operations Review',
+    name: 'Snak Operations Review',
     start_date: '2018-01-01',
     end_date: '2018-12-31',
     is_active: 1,
@@ -166,7 +166,7 @@ const projects = [
   },
   {
     id: '20b97421-f4a5-4e23-8b64-5eda41de27fa',
-    name: 'SNAK INDIA WEBSITE',
+    name: 'Snak INDIA WEBSITE',
     start_date: '2018-01-01',
     end_date: '2018-12-31',
     is_active: 1,

@@ -136,6 +136,7 @@ async function seedCost_segments(client) {
         employee_id UUID REFERENCES employees,
         cost_per_hour numeric(12,2),
         cost_currency VARCHAR(5),
+        hours_per_day time,
         created_by UUID REFERENCES users,
         created TIMESTAMP DEFAULT NOW(),
         modified_by UUID REFERENCES users,

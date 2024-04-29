@@ -11,7 +11,7 @@ const db = getPgpClient();
 
 async function getUser(email: string): Promise<User | undefined> {
     try {
-        const user: User[] = await db.query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
+        const user: User[] = await db.query(`SELECT * FROM users WHERE email = $1`, [email]);
         return user[0];
     } catch (error) {
         console.error('Failed to fetch user:', error);
